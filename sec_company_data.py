@@ -3,13 +3,6 @@ import requests
 import pandas as pd #from here on out, df refers to a pandas dataframe
 import matplotlib.pyplot as plt
 
-"""
-SEC SERVER LIMIT PROBLEM
-cik = '0001326380'
-base_url = 'https://data.sec.gov/api/xbrl/companyfacts/CIK{}.json'
-company_data = requests.get(base_url.format(cik)).json()
-"""
-
 company_file = open('CIK0001326380.json',)
 num_of_accounts = int(input('How many accounts would you like to track? [MIN 1] '))
 accounts_chosen = [] #stores user's list of accounts to track
@@ -74,7 +67,22 @@ def account_stats():
     
     return ax
 
-print(account_stats())
+def net_net():
+    """
+    Calculates net-net working capital, as defined by B. Graham (current assets less total liabilities).
+    """
+    #get accounts as dfs and change new column name
+    current_assets = account_storage('AssetsCurrent', data_file)
+    current_assets = current_assets.rename(columns={"AssetsCurrent ($)": "Net-Net"})
+    
+    total_liabilities = account_storage('Liabilities', data_file)    
+    total_liabilities = total_liabilities.rename(columns={"Liabilities ($)": "Net-Net"})
+    
+    #net-net = current assets - total liabilities
+    net_net_wc = current_assets.set_index('Year').subtract(total_liabilities.set_index('Year'), fill_value=0).reset_index()
+    
+    return net_net_wc
+print(net_net())
 
 
 
