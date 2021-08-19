@@ -1,22 +1,17 @@
 import json
 import requests
-import pandas as pd #from here on out, df refers to a pandas dataframe
+import pandas as pd
 import matplotlib.pyplot as plt
 
+#convert company's json file into pandas dataframe
 company_file = open('CIK0001326380.json',)
-num_of_accounts = int(input('How many accounts would you like to track? [MIN 1] '))
-accounts_chosen = [] #stores user's list of accounts to track
-for num in range(num_of_accounts):
-    accounts_chosen.append(input()) #requests user to enter account (GAAP-formated)
 data_file = json.load(company_file)
-
 
 def account_storage(account, data):
     """
     For a chosen account (e.g., amortization of intangible assets), the function
     converts (from .json to pandas df), cleans, and stores its historical data.
     """
-    
     account_root = data['facts']['us-gaap'][account] #set a base path directory
 
     print(account_root['label']) #account name
@@ -31,29 +26,23 @@ def account_storage(account, data):
         df1 = df[df.columns.difference(['end', 'accn', 'fy', 'fp', 'form', 'filed'])] #remove unwanted columns
         account_data = account_data.append(df1) #append remaining two columns to the initially empty dataframe 
     
-    account_data = account_data.dropna() #remove repeated values (e.g., Q4 data = 10k data)
+    account_data = account_data.dropna() #remove repeated values (e.g., Q4 data = 10k data) 
     account_data = account_data.rename(columns={"val": account + " ($)", "frame": "Year"}) #change column names
     account_data = account_data.reset_index(drop=True) #label rows numerically
     account_data['Year'] = account_data['Year'].map(lambda x: x.lstrip('cCyY').rstrip('iI')) #remove substrings in column
     
-    return account_data #quarterly data
+    return account_data #quarterly data, cleaned
 
-def account_stats():
+def account_yoy_change(accounts_list):
     """
-    Presents YOY change in accounts (as bar graphs). 
+    Presents YOY change in accounts (as bar graphs). Assumes accounts_list is a clean list of quarterly account data.
     """
     #choose stacked vs. unstacked bar graph 
-    bar_graph_type = int(input('Bar Graph(s) Type [enter #]: \n 1. Stacked \n 2. Unstacked \n'))
+    #bar_graph_type = int(input('Bar Graph(s) Type [enter #]: \n 1. Stacked \n 2. Unstacked \n'))
     
-    accounts_as_df = [] #empty list to store accounts as df's 
-    
-    for account in accounts_chosen:
-        #add account df to empty list by calling account_storage function
-        accounts_as_df.append(account_storage(account, data_file)) 
-    
-    all_accounts = pd.concat(accounts_as_df, axis=1) #concatenate all dataframes in the list
+    all_accounts = pd.concat(accounts_list, axis=1) #concatenate all dataframes in the list
     all_accounts = all_accounts.loc[:,~all_accounts.columns.duplicated()] #remove year column since it's repeated
-
+    print(all_accounts)
     quarters = ['1', '2', '3', '4']
     quarter_choice = input('Quarter of choice: ')
     
@@ -67,22 +56,30 @@ def account_stats():
     
     return ax
 
-def net_net():
+#Profitability Ratios
+def roa():
     """
-    Calculates net-net working capital, as defined by B. Graham (current assets less total liabilities).
+    Calculates Return on Assets. Here, ROA = [Net Income + Interest Expenses(1 - Tax Rate)]/Total Assets.
+    in json: operatingincomeloss(1-.21)/Assets
     """
-    #get accounts as dfs and change new column name
-    current_assets = account_storage('AssetsCurrent', data_file)
-    current_assets = current_assets.rename(columns={"AssetsCurrent ($)": "Net-Net"})
+    #manage appropriate accounts
+    operating_income = account_storage('OperatingIncomeLoss', data_file)
+    operating_income['OperatingIncomeLoss ($)'] = operating_income['OperatingIncomeLoss ($)'].multiply(1-0.21) #adjust for corporate tax (21%)
+    total_assets = account_storage('Assets', data_file)
     
-    total_liabilities = account_storage('Liabilities', data_file)    
-    total_liabilities = total_liabilities.rename(columns={"Liabilities ($)": "Net-Net"})
+    operating_income = operating_income[~operating_income['Year'].str.contains("Q")] #remove rows that contain quarterly data
+    operating_income = operating_income.reset_index(drop=True) #label rows numerically
     
-    #net-net = current assets - total liabilities
-    net_net_wc = current_assets.set_index('Year').subtract(total_liabilities.set_index('Year'), fill_value=0).reset_index()
-    
-    return net_net_wc
-print(net_net())
-
-
-
+    #take average of assets as recorded in quarters of a year, and label new columns accordingly
+        
+#user chooses accounts to clean and track
+print("Enter accounts you would like to track. Type 'Q' to quit.")
+accounts = [] #stores processed collection of chosen accounts
+while True:
+    choice = input('Account: ')
+    if choice.lower() == 'q':
+        break
+    else:
+        accounts.append(account_storage(choice, data_file)) 
+        
+print(account_yoy_change(accounts))
