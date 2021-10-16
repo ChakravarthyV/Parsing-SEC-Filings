@@ -33,27 +33,45 @@ def json_to_pd(account):
     
     return account_data #returns quarterly data as a pandas df
 
+#global variables [parses through the recent quarter report]
+cash = json_to_pd('CashAndCashEquivalentAtCarryingValue')['CashAndCashEquivalentAtCarryingValue'].iloc[-1]
+receivables = json_to_pd('AccountsReceivableNetCurrent')['AccountsReceivableNetCurrent'].iloc[-1]
+inventories = json_to_pd('InventoryNet')['InventoryNet'].iloc[-1]
+current_prepaid = json_to_pd('OtherPrepaidExpenseCurrent')['OtherPrepaidExpenseCurrent'].iloc[-1]
+
+current_assets = json_to_pd('AssetsCurrent')['AssetsCurrent'].iloc[-1]
+
+non_current_prepaid = json_to_pd('PrepaidExpenseOtherNoncurrent')['PrepaidExpenseOtherNoncurrent'].iloc[-1]
+ppe = json_to_pd('PropertyPlantAndEquipmentNet')['PropertyPlantAndEquipmentNet'].iloc[-1]
+goodwill = json_to_pd('Goodwill')['Goodwill'].iloc[-1]
+
+total_liabilities = json_to_pd('Liabilities')['Liabilities'].iloc[-1] #taken at face value
+
 def liquidation_value():
     """
-    Assums liquidation is immediate (< 3 years). Returns a conservative estimate
+    Assumes liquidation is immediate (< 3 years). Returns a conservative estimate
     that should, in theory, provide a floor to a firm's fundamental value. In most cases, it will be
     negative since it assumes a worst case scenario where assets reported are difficult to sell and 
     all the liabilities are taken at face value.
     """    
-    receivables_writedown = json_to_pd('AccountsReceivableNetCurrent')['AccountsReceivableNetCurrent'].iloc[-1]*0.15 #takes the last element of receivables column and gives it a 15% writedown
-    inventories_writedown = json_to_pd('InventoryNet')['InventoryNet'].iloc[-1]*0.50 #50% reduction
-    current_assets = json_to_pd('AssetsCurrent')['AssetsCurrent'].iloc[-1] #no reduction
+    receivables_writedown = receivables*0.15 #takes the last element of receivables column and gives it a 15% writedown
+    inventories_writedown = inventories*0.50 #50% reduction
     
     adj_current_assets = current_assets - (receivables_writedown + inventories_writedown) #current assets adjusted for conservative writedowns
     
-    adj_ppe = json_to_pd('PropertyPlantAndEquipmentNet')['PropertyPlantAndEquipmentNet'].iloc[-1]*0.45 #45% writedown
+    adj_ppe = ppe*0.45 #reported ppe discounted by 45%
     
     adj_total_assets = adj_current_assets + adj_ppe
-    total_liabilities = json_to_pd('Liabilities')['Liabilities'].iloc[-1] #taken at face value
     
     liq_val = adj_total_assets - total_liabilities
     
     print(liq_val)
+
+def adjusted_nav():
+    """
+    Allows the user to adjust reported accounts as he/she sees fit. The user-adjusted net asset value
+    of the company is returned.
+    """
     
 print(json_to_pd('AssetsCurrent'))
 print(liquidation_value())
