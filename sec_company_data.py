@@ -70,12 +70,12 @@ def adjusted_nav():
         y = float(input('%: '))
         p_list.append(y)
         
-    receivables_writedown = receivables*(1 - p_list[0]/100) #takes the last element of receivables column and gives it a 15% writedown
-    inventories_writedown = inventories*(1 - p_list[1]/100) #50% reduction
+    receivables_writedown = receivables*(1 - p_list[0]/100) #takes the last element of receivables column and gives it a writedown
+    inventories_writedown = inventories*(1 - p_list[1]/100) 
     
     adj_current_assets = current_assets - (receivables_writedown + inventories_writedown) #current assets adjusted for conservative writedowns
     
-    adj_ppe = ppe*(1 - p_list[2]/100) #reported ppe discounted by 45%
+    adj_ppe = ppe*(1 - p_list[2]/100) 
     
     adj_total_assets = adj_current_assets + adj_ppe
     
